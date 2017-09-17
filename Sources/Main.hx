@@ -18,7 +18,7 @@ class Main {
             // Avoid passing update/render directly so replacing
             // them via code injection works
 			Scheduler.addTimeTask(function () { update(); }, 0, 1 / 60);
-			System.notifyOnRender(function () { render(); });
+			System.notifyOnRender(function (framebuffer) { render(framebuffer); });
 		});
 	}
 }
