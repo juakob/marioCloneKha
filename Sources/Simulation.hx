@@ -1,7 +1,6 @@
 package ;
 
 import Input;
-import Resource;
 import kha.Canvas;
 import kha.Scheduler;
 import kha.System;
