@@ -79,7 +79,7 @@ class BackgroundGenerator {
         }
     }
 
-    function setAssets(){
+    public function setAssets(){
 
         if(ground_texture != null) return;
 
@@ -128,7 +128,6 @@ class BackgroundGenerator {
             //frontLayer.addChild(getProp(2));
             //frontLayer.addChild(getProp(3));
             //frontLayer.addChild(getProp(3));
-    //
         //}
         trace("Generated");
     }
