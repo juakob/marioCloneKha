@@ -47,14 +47,15 @@ class G4Renderer {
 
         lightDirection = new FastVector3(0.1,-1,-1);
 
-        var bgg = new BackgroundGenerator();
-        bgg.init(this);
+       
    }
 
    public function addNode(t:Node) {
      root.addChild(t);
    }
-    public function init(){
+    public function init(){ 
+    var bgg = new BackgroundGenerator();
+     bgg.init(this);
     bgg.setAssets();
     }
    
