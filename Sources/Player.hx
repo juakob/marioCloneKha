@@ -133,6 +133,7 @@ class Player extends Entity
 		
 		collision.accelerationY = gravity;
 		pushed = false;
+        if(collision.y>610)die();
     }
 	
 	public function hitBlock() 
