@@ -33,6 +33,7 @@ class Level extends GameState
 	}
 	override public function init():Void 
 	{
+    super.init();
 		stage.backgroundColor = 0xff6b88ff;
 		player1 = new Player(stage);
 		player1.collision.x = 32 * 3;
