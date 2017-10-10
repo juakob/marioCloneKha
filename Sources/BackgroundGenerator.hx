@@ -1,179 +1,175 @@
 package;
+import kha.Color;
+import kha.Framebuffer;
 
-import kha.*;
-import kha.graphics4.*;
-import kha.math.*;
-
-class BackgroundGenerator {
-
-    var plane:Node;
-    var frontLayer:Node;
-    var midLayer:Node;
-    var midBackLayer:Node;
-    var backLayer:Node;
-
-    var pillar:Mesh;
-    var ground:Mesh;
-    var mountain:Mesh;
-    var platform:Mesh;
-    var platformSlant:Mesh;
-
-    var ground_texture:Image;
-    var mountain_texture:Image;
-    var pillar_texture:Image;
-    var platform_texture:Image;
-
-    var maxwidth:Float = 250;
-    var maxItems:Int = 5;
-
-    var assetCount:Int = 2;
-    var doneLoading:Bool = false;
-    var gr:G4Renderer;
-
-    var frontProps:Array<Dynamic>;
-    var middleProps:Array<Dynamic>;
-    var backProps:Array<Dynamic>;
-
-    public function new(){
-        plane = new Node();
-        frontLayer = new Node();
-        frontLayer.setPosition(0,0,-5);
-        midLayer = new Node();
-        midLayer.setPosition(0,0,-10);
-        backLayer = new Node();
-        backLayer.setPosition(0,0,-49);
-        backLayer = new Node();
-        backLayer.setPosition(0,0,-70);
-    }
-
-    public function init(gr:G4Renderer): Void{
-        this.gr = gr;
-        kha.Assets.loadImage("grass", onLoadedImg);
-      //  kha.Assets.loadImage("mountaingrass", onLoadedImg);
-      //  kha.Assets.loadImage("stone", onLoadedImg);
-      //  kha.Assets.loadImage("brownstripe", onLoadedImg);
-
-        kha.Assets.loadBlob("ground_obj", onLoadedBlob);
-      //  kha.Assets.loadBlob("pillar_obj", onLoadedBlob);
-      //  kha.Assets.loadBlob("mountain_obj", onLoadedBlob);
-      //  kha.Assets.loadBlob("platform_obj", onLoadedBlob);
-      //  kha.Assets.loadBlob("platform_slant_obj", onLoadedBlob);
-    }
-
-    function onLoadedImg(i) : Void{
-        assetCount--;
-        if(assetCount == 0 && !doneLoading) 
+/**
+ * ...
+ * @author Joaquin
+ */
+class Level extends GameState
+{
+	var player1:Player;
+	var layer:Layer = new Layer();
+	var ground:CollisionBox;
+	var tileMap:CollisionTileMap;
+	var camera:Camera;
+	var tilesheetDisplay:TileSheet;
+	var blockManager:BlockManager;
+	var items:ItemFactory;
+	var enemies:EnemySpawner;
+	
+	public function new() 
+	{
+		super();
+		
+	}
+	override public function load(aResources:Resources):Void 
+	{
+		aResources.addImage("mario3d");
+		aResources.addImage("tiles64");
+		aResources.addImage("goomba");
+        aResources.addImage("grass");
+        aResources.addData("
+	}
+	override public function init():Void 
+	{
+		stage.backgroundColor = 0xff6b88ff;
+		player1 = new Player(stage);
+		player1.collision.x = 32 * 3;
+		player1.collision.y = 32*5;
+		addChild(player1);
+		
+		var itemLayer:Layer = new Layer();
+		stage.add(itemLayer);
+		items=LevelData.items = new ItemFactory(itemLayer);
+		addChild(items);
+		LevelData.camera=camera = new Camera(800, 600);
+		camera.limits(32, 212 * 32, 0, 600);
+		addChild(camera);
+		
+		ground = new CollisionBox();
+		ground.Static = true;
+		ground.y = 600;
+		ground.width = 800;
+		ground.height = 100;
+		var map:Array<Int> = negateTiles(Maps.map1(), [34, 7, 49]);//positions of items and enemies
+		LevelData.map=tileMap = new CollisionTileMap(map, 32, 32, 214, 19);
+		tilesheetDisplay = new TileSheet(map, "tiles64", 64, 64, 214, 19, 1, 0.5);
+		stage.add(tilesheetDisplay);
+		
+		enemies = new EnemySpawner(tileMap, stage);
+		addChild(enemies);
+		
+		
+		blockManager = new BlockManager(tileMap, tilesheetDisplay,stage);
+		addChild(blockManager);
+	}
+	
+	function negateTiles(map1:Array<Int>, specialTiles:Array<Int>) :Array<Int>
+	{
+		for (i in 0...map1.length) 
+		{
+			for (tile in specialTiles) 
+			{
+				if (map1[i] == tile)
+				{
+					map1[i] *=-1;
+				}
+			}
+		}
+		return map1;
+	}
+	override function onUpdate(aDt:Float):Void 
+	{
+		//warning the callback return order is not granted in all cases yet
+		tileMap.overlap(player1.collision,blocksVsPlayer );
+		tileMap.collide(player1.collision);
+		items.collisions.collide(tileMap);
+		enemies.collisions.collide(enemies.collisions);
+		enemies.collisions.collide(tileMap);	
+		blockManager.blockBounce.overlap(enemies.collisions, enemyHitUnder);
+		enemies.collisions.overlap(player1.collision, goombaVsMario);
+		blockManager.blockBounce.overlap(items.collisions, itemVsBounceBlock);
+		items.collisions.overlap(player1.collision, player1.onOverlapItem);
+		camera.setTarget(player1.collision.x, player1.collision.y);
+		if(player1.isDead())
         {
-            doneLoading = true;
-            setAssets();
+        changeState(new Level());
         }
-        
-    }
-
-    function onLoadedBlob(b) : Void{
-        assetCount--;
-        if(assetCount == 0 && !doneLoading) 
-        {
-            doneLoading = true;
-            setAssets();
-        }
-    }
-
-    function setAssets(){
-
-        if(ground_texture != null) return;
-
-        gr.addNode(plane);
-        gr.addNode(frontLayer);
-        gr.addNode(midLayer);
-        gr.addNode(backLayer);
-
-        ground_texture = kha.Assets.images.grass;
-        //mountain_texture = kha.Assets.images.mountaingrass;
-       // pillar_texture = kha.Assets.images.stone;
-        //platform_texture = kha.Assets.images.brownstripe;
-            
-
-        ground = Meshparser.ObjToMesh(kha.Assets.blobs.ground_obj);
-    //    pillar = Meshparser.ObjToMesh(kha.Assets.blobs.pillar_obj);
-    //    mountain = Meshparser.ObjToMesh(kha.Assets.blobs.mountain_obj);
-     //   platform = Meshparser.ObjToMesh(kha.Assets.blobs.platform_obj);
-     //   platformSlant = Meshparser.ObjToMesh(kha.Assets.blobs.platform_slant_obj);
-
-        frontProps = [platform, platform_texture, platformSlant, platform_texture];
-        middleProps = [pillar, pillar_texture];
-        backProps = [mountain, mountain_texture];
-
-        generate();
-    }
-
-    public function generate(): Void{
-        var node = new Node();
-        node.texture = ground_texture;
-        node.mesh = ground;
-        node.setPosition(0,0,-100);
-        frontLayer.addChild(node);
-        //for(i in 0...maxItems){
-            //frontLayer.addChild(getProp(0));
-            //frontLayer.addChild(getProp(0));
-            //frontLayer.addChild(getProp(0));
-            //frontLayer.addChild(getProp(0));
-            //frontLayer.addChild(getProp(0));
-            //frontLayer.addChild(getProp(0));
-            //frontLayer.addChild(getProp(0));
-            //frontLayer.addChild(getProp(0));
-            //frontLayer.addChild(getProp(0));
-            //frontLayer.addChild(getProp(0));
-            //frontLayer.addChild(getProp(1));
-            //frontLayer.addChild(getProp(2));
-            //frontLayer.addChild(getProp(3));
-            //frontLayer.addChild(getProp(3));
-    //
-        //}
-        trace("Generated");
-    }
-
-    function getProp(layer:Int) : Node{
-        var n = new Node();
-        var rand:Int = 0;
-        switch(layer){
-            case 0:
-                var length =Std.int( frontProps.length/2 );
-                rand = Std.int(Math.random() * length);
-                n.mesh = frontProps[rand*length];
-                n.texture = frontProps[rand*length+1];
-                n.setLocalPosition(Math.random()*maxwidth-50,-Math.random(),Math.random());
-
-             case 1:
-                var scale = Math.random()*12+1;             
-                var length =Std.int( middleProps.length/2 );
-                rand = Std.int(Math.random() * length);
-                n.mesh = middleProps[rand*length];
-                n.texture = middleProps[rand*length+1];
-                n.setScale(scale, scale, scale);
-                n.setLocalPosition(Math.random()*maxwidth-50,0,Math.random());
-            
-            case 2:
-                var length =Std.int( middleProps.length/2 );
-                var scale = Math.random()*12+1;
-                rand = Std.int(Math.random() * length);
-                n.mesh = middleProps[rand*length];
-                n.texture = middleProps[rand*length+1];
-                n.setLocalPosition(Math.random()*maxwidth-50,-2,Math.random());
-                //n.setScale(scale, scale, scale);
-
-            case 3:
-                var length =Std.int( backProps.length/2 );
-                var scale = Math.random()*10+1;
-                rand = Std.int(Math.random() * length);
-                n.mesh = backProps[rand*length];
-               n.setScale(scale, scale, scale);
-                n.texture = backProps[rand*length+1];
-                n.setLocalPosition(Math.random()*maxwidth*2-200,0,Math.random());
-                
-        }
-
-        return n;
-    }
-
+	}
+	
+	function blocksVsPlayer(aBlock:ICollider,aPlayer:ICollider ) 
+	{
+	
+		var block:CollisionBox = cast aBlock;
+		var player:CollisionBox = cast aPlayer;
+		var borderType:Int = tileMap.edgeType2(block.x, block.y);
+		var deltaY:Float =  block.height+player.height-(Math.abs(block.y - player.y) + Math.abs(block.bottom() - player.bottom()));
+		var deltaX:Float = block.width+player.width-(Math.abs(block.x - player.x) + Math.abs(block.right() - player.right()));
+		if (player.y>block.y&&deltaY>0&&( deltaY<deltaX||deltaX<0))
+		{
+			
+			if (player.topMiddle()<block.x && ((borderType&Sides.LEFT)>0))
+			{
+				cast (player.userData).pushLeft();
+			}else
+			if (player.topMiddle()>block.right() && ((borderType&Sides.RIGHT)>0))
+			{
+				cast (player.userData).pushRight();
+			}else {
+				if (player.topMiddle() > block.x && player.topMiddle() < block.right()){
+				blockManager.hitBlock(block, player);
+				}
+			}
+		}
+		
+	}
+	
+	function itemVsBounceBlock(aBlock:ICollider, aItem:ICollider ) 
+	{
+		
+		var block:CollisionBox = cast aBlock;
+		var item:CollisionBox = cast aItem;
+		if (item.right() < (block.x + block.width* (1/4)))
+		{
+			cast item.userData.jumpLeft();
+		}else
+		if (item.x > (block.x + block.width* (3/4)))
+		{
+			cast item.userData.jumpRight();
+		}
+		cast item.userData.jump();
+	}
+	
+	function enemyHitUnder(aBlock:ICollider, aGoomba:ICollider ) 
+	{
+		cast( aGoomba.userData).killFromBelow();
+	}
+	
+	function goombaVsMario(aGoomba:ICollider, aPlayer:ICollider ) 
+	{
+		var goomba:Goomba = cast (cast aGoomba).userData;
+		if (goomba.dyingStomp) return;
+		var player:Player = cast (cast aPlayer).userData;
+		if (player.collision.velocityY > 0||(player.collision.bottom()+20<goomba.collisions.bottom()&&player.invulnerableTime<0))
+		{
+			goomba.stomp();
+			player.stompSomething();
+		}else {
+			player.damage();
+		}
+	}
+	override function render():Void 
+	{
+		stage.x =-camera.screenToWorldX(0);
+		stage.y =-camera.screenToWorldY(0);
+		tilesheetDisplay.setViewArea( -stage.x, -stage.y,-stage.x+ 800,-stage.y+ 600);
+		super.render();
+	}
+	override function onDestroy():Void 
+	{
+		LevelData.clear();
+	}
+	
+	
 }
