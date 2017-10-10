@@ -69,7 +69,7 @@ class Simulation
 	public function onEnterFrame():Void 
 	{
 		if (!mPause) {
-			var time = Scheduler.realTime();
+			var time = Scheduler.time();
 			mFrameByFrameTime =  time- mLastFrameTime;
 			mLastFrameTime = time;
 			
