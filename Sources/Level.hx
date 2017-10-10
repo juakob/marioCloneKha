@@ -50,7 +50,7 @@ class Level extends GameState
 		ground.y = 600;
 		ground.width = 800;
 		ground.height = 100;
-		var map:Array<Int> = negateTiles(Maps.map1, [34, 7, 49]);//positions of items and enemies
+		var map:Array<Int> = negateTiles(Maps.map1(), [34, 7, 49]);//positions of items and enemies
 		LevelData.map=tileMap = new CollisionTileMap(map, 32, 32, 214, 19);
 		tilesheetDisplay = new TileSheet(map, "tiles64", 64, 64, 214, 19, 1, 0.5);
 		stage.add(tilesheetDisplay);
@@ -80,7 +80,8 @@ class Level extends GameState
 	override function onUpdate(aDt:Float):Void 
 	{
 		//warning the callback return order is not granted in all cases yet
-		tileMap.collide(player1.collision,blocksVsPlayer);
+		tileMap.overlap(player1.collision,blocksVsPlayer );
+		tileMap.collide(player1.collision);
 		items.collisions.collide(tileMap);
 		enemies.collisions.collide(enemies.collisions);
 		enemies.collisions.collide(tileMap);	
@@ -89,7 +90,10 @@ class Level extends GameState
 		blockManager.blockBounce.overlap(items.collisions, itemVsBounceBlock);
 		items.collisions.overlap(player1.collision, player1.onOverlapItem);
 		camera.setTarget(player1.collision.x, player1.collision.y);
-		
+		if(player1.isDead())
+        {
+        changeState(new Level());
+        }
 	}
 	
 	function blocksVsPlayer(aBlock:ICollider,aPlayer:ICollider ) 
@@ -97,11 +101,12 @@ class Level extends GameState
 	
 		var block:CollisionBox = cast aBlock;
 		var player:CollisionBox = cast aPlayer;
-		if (player.y >= block.bottom()) {
-		
-		//	if (player.x>block.right()||player.right()<block.x) return;
+		var borderType:Int = tileMap.edgeType2(block.x, block.y);
+		var deltaY:Float =  block.height+player.height-(Math.abs(block.y - player.y) + Math.abs(block.bottom() - player.bottom()));
+		var deltaX:Float = block.width+player.width-(Math.abs(block.x - player.x) + Math.abs(block.right() - player.right()));
+		if (player.y>block.y&&deltaY>0&&( deltaY<deltaX||deltaX<0))
+		{
 			
-			var borderType:Int = tileMap.edgeType2(block.x, block.y);
 			if (player.topMiddle()<block.x && ((borderType&Sides.LEFT)>0))
 			{
 				cast (player.userData).pushLeft();
@@ -110,7 +115,9 @@ class Level extends GameState
 			{
 				cast (player.userData).pushRight();
 			}else {
+				if (player.topMiddle() > block.x && player.topMiddle() < block.right()){
 				blockManager.hitBlock(block, player);
+				}
 			}
 		}
 		
