@@ -54,7 +54,9 @@ class G4Renderer {
    public function addNode(t:Node) {
      root.addChild(t);
    }
-
+    public function init(){
+    bgg.setAssets();
+    }
    
 
    function setupPipelines(){
