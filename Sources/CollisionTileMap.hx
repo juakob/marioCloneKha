@@ -104,6 +104,32 @@ class CollisionTileMap implements ICollider
 	}
 	public function overlap(aCollider:ICollider,?NotifyCallback:ICollider->ICollider->Void):Bool 
 	{
+		if (aCollider.collisionType() == CollisionType.Box)
+		{
+			//TODO calculate more points if the box is much larger than tiles
+			var box:CollisionBox = cast aCollider;
+			var minX:Int = Std.int(box.x / tileWidth);
+			var minY:Int = Std.int(box.y / tileHeight);
+			var maxX:Int = Std.int((box.x+box.width) / tileWidth)+1;
+			var maxY:Int=Std.int((box.y+box.height) / tileHeight)+1;
+		
+			var toReturn:Bool=false;
+			for (tileY in minY...maxY) 
+			{
+				for (tileX in minX...maxX) 
+				{
+					
+					if (getTileId(tileX, tileY) >= startingCollisionIndex)
+					{
+						helperTile.collisionAllow=edges[tileX + tileY * widthIntTiles];
+						helperTile.x =tileX *tileWidth;
+						helperTile.y = tileY*tileHeight;
+						toReturn=helperTile.overlap(box,NotifyCallback)||toReturn;
+					}
+				}
+				
+			}
+		}
 		return false;
 	}
 	
