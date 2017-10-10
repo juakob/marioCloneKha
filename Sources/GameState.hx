@@ -21,7 +21,7 @@ class GameState extends Entity
 		
 	}
 	public function init():Void {
-		g4Renderer.setAssets();
+		g4Renderer.init();
 	}
 	public function changeState(state:GameState):Void{
 		Simulation.i.changeState(state);
